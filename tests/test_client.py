@@ -17,12 +17,12 @@ import platform
 import sys
 import time
 import unittest
-import mock
+from . import mock
 
 import shotgun_api3.lib.httplib2 as httplib2
 import shotgun_api3 as api
 from shotgun_api3.shotgun import ServerCapabilities, SG_TIMEZONE
-import base
+from . import base
 
 class TestShotgunClient(base.MockTestBase):
     '''Test case for shotgun api with server interactions mocked.'''
@@ -99,7 +99,7 @@ class TestShotgunClient(base.MockTestBase):
         def auth_args():
             args = self.sg._http_request.call_args[0]
             body = args[2]
-            body = json.loads(body)
+            body = json.loads(body.decode('utf-8'))
             return body["params"][0]
 
         self.sg.config.extra_auth_params = None
@@ -120,7 +120,7 @@ class TestShotgunClient(base.MockTestBase):
         def auth_args():
             args = self.sg._http_request.call_args[0]
             body = args[2]
-            body = json.loads(body)
+            body = json.loads(body.decode('utf-8'))
             return body["params"][0]
 
         self.sg.set_session_uuid(None)
@@ -152,7 +152,7 @@ class TestShotgunClient(base.MockTestBase):
         # login:password@domain
         auth_url = "%s%s@%s" % (self.uri_prefix, login_password, self.domain)
         sg = api.Shotgun(auth_url, None, None, connect=False)
-        expected = "Basic " + base64.encodestring(login_password).strip()
+        expected = "Basic " + base64.encodestring(login_password.encode('ascii')).decode('utf-8').strip()
         self.assertEqual(expected, sg.config.authorization)
 
     def test_authorization(self):
@@ -165,14 +165,14 @@ class TestShotgunClient(base.MockTestBase):
 
         self.sg = api.Shotgun(auth_url, "foo", "bar", connect=False)
         self._setup_mock()
-        self._mock_http({ 'version': [2, 4, 0, u'Dev'] })
+        self._mock_http({ 'version': [2, 4, 0, 'Dev'] })
 
         self.sg.info()
 
         args, _ = self.sg._http_request.call_args
         verb, path, body, headers = args
 
-        expected = "Basic " + base64.encodestring(login_password).strip()
+        expected = "Basic " + base64.encodestring(login_password.encode('ascii')).decode('utf-8').strip()
         self.assertEqual(expected, headers.get("Authorization"))
 
     def test_user_agent(self):
@@ -260,7 +260,7 @@ class TestShotgunClient(base.MockTestBase):
 
         try:
             self.sg.info()
-        except api.Fault, e:
+        except api.Fault as e:
             self.assertEqual("Go BANG", str(e))
 
     def test_call_rpc(self):
@@ -298,7 +298,10 @@ class TestShotgunClient(base.MockTestBase):
 
         # Test unicode mixed with utf-8 as reported in Ticket #17959
         d = { "results" : ["foo", "bar"] }
-        a = { "utf_str": "\xe2\x88\x9a", "unicode_str": "\xe2\x88\x9a".decode("utf-8") }
+        if sys.version_info < (3,0):
+            a = { "utf_str": "\xe2\x88\x9a", "unicode_str": "\xe2\x88\x9a".decode("utf-8") }
+        else:
+            a = { "utf_str": "\xe2\x88\x9a", "unicode_str": "\xe2\x88\x9a" }
         self._mock_http(d)
         rv = self.sg._call_rpc("list", a)
         expected = "rpc response with list result"
@@ -330,14 +333,14 @@ class TestShotgunClient(base.MockTestBase):
             return datetime.datetime(*time.strptime(s, f)[:6])
 
         def assert_wire(wire, match):
-            self.assertTrue(isinstance(wire["date"], basestring))
+            self.assertTrue(isinstance(wire["date"], str))
             d = _datetime(wire["date"], "%Y-%m-%d").date()
             d = wire['date']
             self.assertEqual(match["date"], d)
-            self.assertTrue(isinstance(wire["datetime"], basestring))
+            self.assertTrue(isinstance(wire["datetime"], str))
             d = _datetime(wire["datetime"], "%Y-%m-%dT%H:%M:%SZ")
             self.assertEqual(match["datetime"], d)
-            self.assertTrue(isinstance(wire["time"], basestring))
+            self.assertTrue(isinstance(wire["time"], str))
             d = _datetime(wire["time"], "%Y-%m-%dT%H:%M:%SZ")
             self.assertEqual(match["time"], d.time())
 
@@ -365,22 +368,22 @@ class TestShotgunClient(base.MockTestBase):
         """Request body is encoded as JSON"""
 
         d = {
-            "this is " : u"my data \u00E0"
+            "this is " : "my data \u00E0"
         }
         j = self.sg._encode_payload(d)
-        self.assertTrue(isinstance(j, str))
+        self.assertTrue(isinstance(j, bytes))
 
         d = {
-            "this is " : u"my data"
+            "this is " : "my data"
         }
         j = self.sg._encode_payload(d)
-        self.assertTrue(isinstance(j, str))
+        self.assertTrue(isinstance(j, bytes))
 
     def test_decode_response_ascii(self):
-        self._assert_decode_resonse(True, u"my data \u00E0".encode('utf8'))
+        self._assert_decode_resonse(True, "my data \u00E0".encode('utf8'))
 
     def test_decode_response_unicode(self):
-        self._assert_decode_resonse(False, u"my data \u00E0")
+        self._assert_decode_resonse(False, "my data \u00E0")
 
     def _assert_decode_resonse(self, ensure_ascii, data):
         """HTTP Response is decoded as JSON or text"""
@@ -398,7 +401,10 @@ class TestShotgunClient(base.MockTestBase):
                          ensure_ascii = ensure_ascii,
                          connect=False)
 
-        j = json.dumps(d, ensure_ascii=ensure_ascii, encoding="utf-8")
+        if sys.version_info < (3,0):
+            j = json.dumps(d, ensure_ascii=ensure_ascii, encoding="utf-8")
+        else:
+            j = json.dumps(d, ensure_ascii=ensure_ascii)
         self.assertEqual(d, sg._decode_response(headers, j))
 
         headers["content-type"] = "text/javascript"

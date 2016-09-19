@@ -2,9 +2,12 @@ import sys
 import os
 import logging
 
-from .lib.httplib2 import Http, ProxyInfo, socks, SSLHandshakeError
+if sys.version_info>=(3,5):
+    from .lib.httplib2 import Http, ProxyInfo, socks, SSLHandshakeError
+else:
+    from .lib.httplegacy2 import Http, ProxyInfo, socks, SSLHandshakeError #httplib has seperate py3 and py2 versions
 from .lib.sgtimezone import SgTimezone
-from .lib.xmlrpclib import Error, ProtocolError, ResponseError
+from xmlrpc.client import Error, ProtocolError, ResponseError
 
 
 LOG = logging.getLogger("shotgun_api3")

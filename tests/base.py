@@ -1,11 +1,12 @@
 """Base class for Shotgun API tests."""
 import os
+import sys
 import re
 import unittest
-from ConfigParser import ConfigParser
+from configparser import ConfigParser
 
 
-import mock
+from . import mock
 
 import shotgun_api3 as api
 from shotgun_api3.shotgun import json
@@ -125,8 +126,10 @@ class MockTestBase(TestBase):
         if not isinstance(self.sg._http_request, mock.Mock):
             return
 
-        if not isinstance(data, basestring):
+        if not isinstance(data, str) and sys.version_info<=(3,0):
             data = json.dumps(data, ensure_ascii=False, encoding="utf-8")
+        elif not isinstance(data, str):
+            data = json.dumps(data, ensure_ascii=False)
 
         resp_headers = { 'cache-control': 'no-cache',
                          'connection': 'close',
@@ -149,8 +152,8 @@ class MockTestBase(TestBase):
         """Asserts _http_request is called with the method and params."""
         args, _ = self.sg._http_request.call_args
         arg_body = args[2]
-        assert isinstance(arg_body, basestring)
-        arg_body = json.loads(arg_body)
+        assert isinstance(arg_body, bytes)
+        arg_body = json.loads(arg_body.decode('utf-8'))
 
         arg_params = arg_body.get("params")
 
@@ -192,7 +195,7 @@ class LiveTestBase(TestBase):
     '''Test base for tests relying on connection to server.'''
     def setUp(self, auth_mode='ApiUser'):
         super(LiveTestBase, self).setUp(auth_mode)
-        self.sg_version = self.sg.info()['version'][:3]
+        self.sg_version = tuple(self.sg.info()['version'][:3])
         self._setup_db(self.config)
         if self.sg.server_caps.version and \
            self.sg.server_caps.version >= (3, 3, 0) and \
@@ -335,7 +338,7 @@ def _find_or_create_entity(sg, entity_type, data, identifyiers=None):
     @returns dicitonary of the entity values
     '''
     identifyiers = identifyiers or ['name']
-    fields = data.keys()
+    fields = list(data.keys())
     filters = [[key, 'is', data[key]] for key in identifyiers]
     entity = sg.find_one(entity_type, filters, fields=fields)
     entity = entity or sg.create(entity_type, data, return_fields=fields)

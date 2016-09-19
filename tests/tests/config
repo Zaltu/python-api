@@ -1,0 +1,27 @@
+# Example server and login information to use for tests which require a live server.
+# This file should be renamed to config and the appropriate values should be added.
+
+[SERVER_INFO]
+
+# Full url to the Shotgun server server
+# e.g. http://my-company.shotgunstudio.com
+server_url     : https://zaltu.shotgunstudio.com
+# script name as key as listed in admin panel for your server
+script_name    : Samuel - API
+api_key        : 2b3f3b6e442242c067501a9e17503bac1d27b6ea244a4e4b5987e26d5f6520e2
+http_proxy     :
+session_uuid   :
+
+[TEST_DATA]
+project_name   : SG unittest project
+
+human_name     : Samuel Waugh
+human_login    : samuel
+human_password : Cicada3301
+
+asset_code     : Jack Frost
+version_code   : Aeon 1-0 2-0
+shot_code      : Waka waka
+task_content   : MEMEME!
+ticket_title   : Death Blossom
+playlist_code  : Test

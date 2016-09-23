@@ -1686,7 +1686,7 @@ class Shotgun(object):
                         body = e.readlines()
                         if body:
                             xml = b''.join(body)
-                            xml.decode('utf-8')
+                            xml = xml.decode('utf-8')
                             # Once python 2.4 support is not needed we can think about using elementtree.
                             # The doc is pretty small so this shouldn't be an issue.
                             match = re.search('<Message>(.*)</Message>', xml)
